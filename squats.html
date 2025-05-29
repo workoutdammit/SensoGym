@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Sensogym - Squats</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #f5f5f5;
+      text-align: center;
+      padding: 30px;
+    }
+    h1 {
+      color: #34495e;
+    }
+    button {
+      padding: 15px 25px;
+      font-size: 18px;
+      background: #8e44ad;
+      color: white;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+    }
+    #count {
+      font-size: 60px;
+      margin-top: 30px;
+      color: #e74c3c;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>🧍‍♂️ Squat Tracker</h1>
+  <button onclick="startSquats()">Start Squats</button>
+  <div id="count">0</div>
+
+  <!-- Sounds -->
+  <audio id="startSound" src="https://www.soundjay.com/buttons/sounds/button-10.mp3"></audio>
+  <audio id="countSound" src="https://www.soundjay.com/buttons/sounds/button-7.mp3"></audio>
+  <audio id="endSound" src="https://www.soundjay.com/button/sounds/button-16.mp3"></audio>
+
+  <script>
+    let squatCount = 0;
+    let goingDown = false;
+    let lastSquatTime = 0;
+
+    const countDisplay = document.getElementById('count');
+    const startSound = document.getElementById('startSound');
+    const countSound = document.getElementById('countSound');
+    const endSound = document.getElementById('endSound');
+
+    function startSquats() {
+      squatCount = 0;
+      goingDown = false;
+      countDisplay.textContent = squatCount;
+      startSound.play();
+      lastSquatTime = Date.now();
+
+      if (window.DeviceMotionEvent) {
+        window.addEventListener('devicemotion', handleMotion);
+      }
+
+      // Auto-stop after 10s of inactivity
+      setInterval(() => {
+        if (Date.now() - lastSquatTime > 10000) {
+          stopSquats();
+        }
+      }, 1000);
+    }
+
+    function stopSquats() {
+      window.removeEventListener('devicemotion', handleMotion);
+      endSound.play();
+      alert(`You completed ${squatCount} squats!`);
+    }
+
+    function handleMotion(event) {
+      const acc = event.accelerationIncludingGravity;
+      const y = acc.y || 0;
+      const z = acc.z || 0;
+
+      const verticalMotion = y + z;
+
+      // Detect squat dip (going down)
+      if (verticalMotion < -15) {
+        goingDown = true;
+        lastSquatTime = Date.now();
+      }
+
+      // Detect return (coming up)
+      if (goingDown && verticalMotion > -5) {
+        goingDown = false;
+        squatCount++;
+        countDisplay.textContent = squatCount;
+        countSound.play();
+      }
+    }
+  </script>
+
+</body>
+</html>
