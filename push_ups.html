@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Sensogym - Push-Up Counter</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      padding: 40px;
+      background: #f0f0f0;
+    }
+    button {
+      padding: 15px 30px;
+      font-size: 18px;
+      background-color: #007bff;
+      color: white;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      margin: 10px;
+    }
+    #status {
+      font-size: 24px;
+      margin: 20px 0;
+    }
+    #count {
+      font-size: 36px;
+      color: #333;
+      margin-top: 30px;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>🏋️ Sensogym - Push-Up Counter</h1>
+  <p>Place your phone on your upper chest. Push up and down — we'll count it!</p>
+  <button onclick="startPushUps()">Start</button>
+  <button onclick="stopPushUps()">Stop</button>
+  <div id="status">Ready when you are...</div>
+  <div id="count">Push-Ups: 0</div>
+
+  <!-- Sound effects -->
+  <audio id="startSound" src="https://actions.google.com/sounds/v1/cartoon/wood_plank_flicks.ogg" preload="auto"></audio>
+  <audio id="repSound" src="https://actions.google.com/sounds/v1/cartoon/pop.ogg" preload="auto"></audio>
+  <audio id="endSound" src="https://actions.google.com/sounds/v1/cartoon/clang_and_wobble.ogg" preload="auto"></audio>
+
+  <script>
+    let pushUpCount = 0;
+    let motionListener = null;
+    let inactivityTimer = null;
+    let lastMotionTime = null;
+
+    let state = 'waiting'; // can be 'waiting' -> 'down' -> 'up'
+
+    function startPushUps() {
+      pushUpCount = 0;
+      updateUI("Doing push-ups... Go hard!", 0);
+      document.getElementById('startSound').play();
+
+      if (typeof DeviceMotionEvent.requestPermission === 'function') {
+        DeviceMotionEvent.requestPermission()
+          .then(permissionState => {
+            if (permissionState === 'granted') {
+              beginCounting();
+            } else {
+              alert('Sensor permission denied');
+            }
+          }).catch(console.error);
+      } else {
+        beginCounting();
+      }
+    }
+
+    function beginCounting() {
+      state = 'waiting';
+      lastMotionTime = Date.now();
+
+      motionListener = (event) => {
+        const z = event.accelerationIncludingGravity.z || 0;
+        const now = Date.now();
+
+        // Down and up thresholds
+        const downThreshold = 7.5;
+        const upThreshold = 10.5;
+
+        if (state === 'waiting' && z < downThreshold) {
+          state = 'down';
+        }
+
+        if (state === 'down' && z > upThreshold) {
+          state = 'waiting';
+          pushUpCount++;
+          document.getElementById('repSound').play();
+          updateUI(null, pushUpCount);
+        }
+
+        lastMotionTime = now;
+      };
+
+      window.addEventListener('devicemotion', motionListener);
+
+      // Stop after 10 seconds of no movement
+      inactivityTimer = setInterval(() => {
+        if (Date.now() - lastMotionTime > 10000) {
+          stopPushUps(true);
+        }
+      }, 1000);
+    }
+
+    function stopPushUps(auto = false) {
+      if (motionListener) window.removeEventListener('devicemotion', motionListener);
+      clearInterval(inactivityTimer);
+      document.getElementById('endSound').play();
+      updateUI(auto ? "Stopped due to inactivity." : "You stopped.", pushUpCount);
+    }
+
+    function updateUI(status, count) {
+      if (status !== null) document.getElementById('status').innerText = status;
+      if (count !== null) document.getElementById('count').innerText = `Push-Ups: ${count}`;
+    }
+  </script>
+</body>
+</html>

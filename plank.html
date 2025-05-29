@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Sensogym - Plank Timer with Sound</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      padding: 40px;
+      background: #f0f0f0;
+    }
+    #status {
+      font-size: 24px;
+      margin: 20px 0;
+    }
+    button {
+      padding: 15px 30px;
+      font-size: 18px;
+      background-color: #28a745;
+      color: white;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+    }
+    #record {
+      font-size: 30px;
+      color: #333;
+      margin-top: 30px;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>🧘‍♂️ Sensogym - Plank Timer</h1>
+  <p>Place your phone on your back after pressing start. The timer will stop when movement is detected.</p>
+  <button onclick="startPlank()">Start Plank</button>
+  <div id="status">Waiting to start...</div>
+  <div id="record"></div>
+
+  <!-- Audio elements for notification sounds -->
+  <audio id="startSound" src="https://actions.google.com/sounds/v1/cartoon/wood_plank_flicks.ogg" preload="auto"></audio>
+  <audio id="endSound" src="https://actions.google.com/sounds/v1/cartoon/clang_and_wobble.ogg" preload="auto"></audio>
+
+  <script>
+    let startTime, motionListener;
+
+    function startPlank() {
+      if (typeof DeviceMotionEvent.requestPermission === 'function') {
+        DeviceMotionEvent.requestPermission()
+          .then(permissionState => {
+            if (permissionState === 'granted') {
+              beginTracking();
+            } else {
+              alert('Permission to access sensors denied.');
+            }
+          })
+          .catch(console.error);
+      } else {
+        beginTracking();
+      }
+    }
+
+    function beginTracking() {
+      document.getElementById('status').innerText = 'Planking... Stay still!';
+      document.getElementById('record').innerText = '';
+
+      // Play start sound
+      document.getElementById('startSound').play();
+
+      startTime = Date.now();
+
+      motionListener = function (event) {
+        const x = event.accelerationIncludingGravity.x || 0;
+        const y = event.accelerationIncludingGravity.y || 0;
+        const z = event.accelerationIncludingGravity.z || 0;
+
+        const totalAcceleration = Math.sqrt(x * x + y * y + z * z);
+
+        // Threshold to detect movement: adjust if needed
+        if (Math.abs(totalAcceleration - 9.8) > 1.2) {
+          stopPlank();
+        }
+      };
+
+      window.addEventListener('devicemotion', motionListener);
+    }
+
+    function stopPlank() {
+      const endTime = Date.now();
+      const duration = ((endTime - startTime) / 1000).toFixed(1);
+
+      // Play end sound
+      document.getElementById('endSound').play();
+
+      document.getElementById('status').innerText = 'Plank stopped!';
+      document.getElementById('record').innerText = `Your planking record: ${duration} seconds`;
+
+      window.removeEventListener('devicemotion', motionListener);
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Sensogym - Pull-Up Counter</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      padding: 40px;
+      background: #f0f0f0;
+    }
+    button {
+      padding: 15px 30px;
+      font-size: 18px;
+      background-color: #28a745;
+      color: white;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      margin: 10px;
+    }
+    #status {
+      font-size: 24px;
+      margin: 20px 0;
+    }
+    #count {
+      font-size: 36px;
+      color: #333;
+      margin-top: 30px;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>🏋️ Sensogym - Pull-Up Counter</h1>
+  <p>Put your phone vertically in your pocket. Pull yourself up and down — we’ll count it!</p>
+  <button onclick="startPullUps()">Start</button>
+  <button onclick="stopPullUps()">Stop</button>
+  <div id="status">Ready when you are...</div>
+  <div id="count">Pull-Ups: 0</div>
+
+  <!-- Sound effects -->
+  <audio id="startSound" src="https://actions.google.com/sounds/v1/cartoon/wood_plank_flicks.ogg" preload="auto"></audio>
+  <audio id="repSound" src="https://actions.google.com/sounds/v1/cartoon/pop.ogg" preload="auto"></audio>
+  <audio id="endSound" src="https://actions.google.com/sounds/v1/cartoon/clang_and_wobble.ogg" preload="auto"></audio>
+
+  <script>
+    let pullUpCount = 0;
+    let motionListener = null;
+    let inactivityTimer = null;
+    let lastMotionTime = null;
+    let state = 'waiting'; // waiting -> down -> up -> count
+
+    function startPullUps() {
+      pullUpCount = 0;
+      updateUI("Doing pull-ups... Let's go!", 0);
+      document.getElementById('startSound').play();
+
+      if (typeof DeviceMotionEvent.requestPermission === 'function') {
+        DeviceMotionEvent.requestPermission()
+          .then(permissionState => {
+            if (permissionState === 'granted') {
+              beginCounting();
+            } else {
+              alert('Sensor permission denied');
+            }
+          }).catch(console.error);
+      } else {
+        beginCounting();
+      }
+    }
+
+    function beginCounting() {
+      state = 'waiting';
+      lastMotionTime = Date.now();
+
+      motionListener = (event) => {
+        const y = event.accelerationIncludingGravity.y || 0;
+        const now = Date.now();
+
+        // Adjust thresholds as needed based on testing
+        const downThreshold = 5.0;
+        const upThreshold = 9.8; // gravity-ish
+
+        if (state === 'waiting' && y < downThreshold) {
+          state = 'down';
+        } else if (state === 'down' && y > upThreshold) {
+          state = 'up';
+        } else if (state === 'up' && y < downThreshold) {
+          // full cycle complete
+          pullUpCount++;
+          state = 'down'; // ready for next cycle
+          document.getElementById('repSound').play();
+          updateUI(null, pullUpCount);
+        }
+
+        lastMotionTime = now;
+      };
+
+      window.addEventListener('devicemotion', motionListener);
+
+      inactivityTimer = setInterval(() => {
+        if (Date.now() - lastMotionTime > 10000) {
+          stopPullUps(true);
+        }
+      }, 1000);
+    }
+
+    function stopPullUps(auto = false) {
+      if (motionListener) window.removeEventListener('devicemotion', motionListener);
+      clearInterval(inactivityTimer);
+      document.getElementById('endSound').play();
+      updateUI(auto ? "Stopped due to inactivity." : "You stopped.", pullUpCount);
+    }
+
+    function updateUI(status, count) {
+      if (status !== null) document.getElementById('status').innerText = status;
+      if (count !== null) document.getElementById('count').innerText = `Pull-Ups: ${count}`;
+    }
+  </script>
+</body>
+</html>
