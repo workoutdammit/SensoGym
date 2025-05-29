@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Sensogym - Lunges</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #f5f5f5;
+      text-align: center;
+      padding: 30px;
+    }
+    h1 {
+      font-size: 32px;
+      color: #2c3e50;
+    }
+    button {
+      padding: 15px 25px;
+      font-size: 18px;
+      background: #27ae60;
+      color: white;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+    }
+    #count {
+      font-size: 60px;
+      margin-top: 30px;
+      color: #e74c3c;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>🏃‍♂️ Lunges Tracker</h1>
+  <button onclick="startLunges()">Start Lunges</button>
+  <div id="count">0</div>
+
+  <!-- Sounds -->
+  <audio id="startSound" src="https://www.soundjay.com/buttons/sounds/button-29.mp3"></audio>
+  <audio id="countSound" src="https://www.soundjay.com/button/sounds/button-20.mp3"></audio>
+  <audio id="endSound" src="https://www.soundjay.com/misc/sounds/bell-ringing-05.mp3"></audio>
+
+  <script>
+    let lungeCount = 0;
+    let isLunging = false;
+    let lastLungeTime = 0;
+    let lastMotion = null;
+
+    const countDisplay = document.getElementById('count');
+    const startSound = document.getElementById('startSound');
+    const countSound = document.getElementById('countSound');
+    const endSound = document.getElementById('endSound');
+
+    function startLunges() {
+      startSound.play();
+      lungeCount = 0;
+      countDisplay.textContent = lungeCount;
+      isLunging = false;
+      lastLungeTime = Date.now();
+
+      if (window.DeviceMotionEvent) {
+        window.addEventListener('devicemotion', handleMotion);
+      }
+
+      if (window.DeviceOrientationEvent) {
+        window.addEventListener('deviceorientation', handleOrientation);
+      }
+
+      // Auto-stop after 10s of inactivity
+      setInterval(() => {
+        if (Date.now() - lastLungeTime > 10000) {
+          stopLunges();
+        }
+      }, 1000);
+    }
+
+    function stopLunges() {
+      window.removeEventListener('devicemotion', handleMotion);
+      window.removeEventListener('deviceorientation', handleOrientation);
+      endSound.play();
+      alert(`Your lunge count: ${lungeCount}`);
+    }
+
+    let prevY = null;
+    let goingDown = false;
+
+    function handleMotion(event) {
+      const acc = event.accelerationIncludingGravity;
+      const x = acc.x;
+      const y = acc.y;
+      const z = acc.z;
+
+      const totalMovement = Math.abs(x) + Math.abs(y) + Math.abs(z);
+
+      if (totalMovement > 15) {
+        lastLungeTime = Date.now();
+      }
+
+      if (Math.abs(y) > 5 && Math.abs(x) > 2) {
+        if (!isLunging) {
+          isLunging = true;
+        }
+      } else if (isLunging && Math.abs(y) < 2 && Math.abs(x) < 2) {
+        // Completed return motion
+        isLunging = false;
+        lungeCount++;
+        countDisplay.textContent = lungeCount;
+        countSound.play();
+      }
+    }
+
+    function handleOrientation(event) {
+      // Optional: Use tilt data if needed
+      // const gamma = event.gamma; // left-right
+      // const beta = event.beta;   // front-back
+    }
+  </script>
+
+</body>
+</html>
