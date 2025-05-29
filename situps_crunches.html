@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Sensogym - Sit-ups & Crunches</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #f5f5f5;
+      text-align: center;
+      padding: 30px;
+    }
+    h1 {
+      color: #2c3e50;
+    }
+    button {
+      padding: 15px 25px;
+      font-size: 18px;
+      background: #27ae60;
+      color: white;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      margin-top: 20px;
+    }
+    #count {
+      font-size: 60px;
+      margin-top: 40px;
+      color: #e67e22;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>🤸 Sit-Ups & Crunches Counter</h1>
+  <button onclick="startSitups()">Start</button>
+  <div id="count">0</div>
+
+  <!-- Sounds -->
+  <audio id="startSound" src="https://www.soundjay.com/buttons/sounds/button-3.mp3"></audio>
+  <audio id="countSound" src="https://www.soundjay.com/buttons/sounds/button-4.mp3"></audio>
+  <audio id="endSound" src="https://www.soundjay.com/buttons/sounds/button-10.mp3"></audio>
+
+  <script>
+    let repCount = 0;
+    let isTilting = false;
+    let lastRepTime = 0;
+
+    const threshold = 0.8; // radians/sec (adjust if needed)
+    const countDisplay = document.getElementById('count');
+
+    const startSound = document.getElementById('startSound');
+    const countSound = document.getElementById('countSound');
+    const endSound = document.getElementById('endSound');
+
+    function startSitups() {
+      repCount = 0;
+      isTilting = false;
+      countDisplay.textContent = repCount;
+      startSound.play();
+      lastRepTime = Date.now();
+
+      if (window.DeviceMotionEvent) {
+        window.addEventListener('devicemotion', handleMotion);
+      }
+
+      // Auto-stop after 10 seconds of inactivity
+      setInterval(() => {
+        if (Date.now() - lastRepTime > 10000) {
+          stopSitups();
+        }
+      }, 1000);
+    }
+
+    function stopSitups() {
+      window.removeEventListener('devicemotion', handleMotion);
+      endSound.play();
+      alert(`You completed ${repCount} sit-ups/crunches!`);
+    }
+
+    function handleMotion(event) {
+      const gyro = event.rotationRate;
+      if (!gyro) return;
+
+      const yRot = gyro.beta || 0; // Rotation around Y-axis (side to side in landscape)
+
+      if (Math.abs(yRot) > threshold * 57.3) {
+        if (!isTilting) {
+          isTilting = true;
+        }
+        lastRepTime = Date.now();
+      } else if (isTilting) {
+        isTilting = false;
+        repCount++;
+        countDisplay.textContent = repCount;
+        countSound.play();
+      }
+    }
+  </script>
+
+</body>
+</html>
